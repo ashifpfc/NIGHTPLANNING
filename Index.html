@@ -1,916 +1,781 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Night Shift Progress</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#1B2631; --muted:#5F6E7C; --line:#D3DAE1;
-  --hivis:#E9740C; --done:#1F8A4C; --nc:#B26A00; --ns:#8794A1;
-  --done-bg:#E3F3EA; --nc-bg:#FFF3DC; --ns-bg:#EEF1F4; --red:#C7372F; --red-bg:#FBE7E5;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#16202A; --panel:#1F2C38; --ink:#E7ECF1; --muted:#9AA8B5; --line:#2F3F4E;
-    --hivis:#FF8F2E; --done:#3CC47A; --nc:#F5A623; --ns:#7C8B99;
-    --done-bg:#183A2A; --nc-bg:#3D2E12; --ns-bg:#24323F; --red:#F0645A; --red-bg:#43211F;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#16202A; --panel:#1F2C38; --ink:#E7ECF1; --muted:#9AA8B5; --line:#2F3F4E;
-  --hivis:#FF8F2E; --done:#3CC47A; --nc:#F5A623; --ns:#7C8B99;
-  --done-bg:#183A2A; --nc-bg:#3D2E12; --ns-bg:#24323F; --red:#F0645A; --red-bg:#43211F;
-}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,"Segoe UI",Roboto,Arial,sans-serif;}
-.wrap{max-width:720px;margin:0 auto;padding:16px 14px 120px}
-h1{font:700 2rem/1.05 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:8px 0 4px;letter-spacing:.01em}
-.sub{color:var(--muted);margin:0 0 16px;font-size:.95rem}
-.stripe{height:8px;border-radius:2px;margin-bottom:14px;
-  background:repeating-linear-gradient(-45deg,var(--hivis) 0 12px,var(--ink) 12px 24px);opacity:.9}
-textarea{width:100%;min-height:200px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);
-  font:15px/1.45 Barlow,Arial,sans-serif;padding:12px;resize:vertical}
-button{font:600 1rem Barlow,Arial,sans-serif;cursor:pointer;border-radius:8px;border:1px solid var(--line);
-  background:var(--panel);color:var(--ink);padding:10px 14px}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--hivis);outline-offset:2px}
-.primary{background:var(--hivis);border-color:var(--hivis);color:#1B1206}
-.row-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.meter{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--ns-bg);border:1px solid var(--line)}
-.meter span{display:block;height:100%;transition:width .25s}
-.counts{display:flex;gap:16px;margin:8px 0 18px;font-weight:600;font-size:.95rem;flex-wrap:wrap}
-.counts b{font:700 1.5rem "Barlow Condensed",Arial,sans-serif;margin-right:4px}
-.c-done{color:var(--done)} .c-nc{color:var(--nc)} .c-ns{color:var(--ns)}
-.group{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--hivis);border-radius:6px;margin-bottom:14px;padding:10px 12px 4px}
-.group h2{font:700 1.2rem/1.2 "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:2px 0 8px}
-.gcount{color:var(--muted);font:500 .85rem Barlow,Arial,sans-serif;margin-left:6px}
-.item{display:grid;grid-template-columns:1fr;gap:6px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
-.cell{font:700 1.15rem "Barlow Condensed",Arial,sans-serif}
-.seg{grid-column:1/-1;display:flex;gap:6px}
-.seg button{flex:1;padding:8px 6px;font-size:.9rem}
-.seg button[aria-pressed="true"].done{background:var(--done-bg);border-color:var(--done);color:var(--done)}
-.seg button[aria-pressed="true"].nc{background:var(--nc-bg);border-color:var(--nc);color:var(--nc)}
-.seg button[aria-pressed="true"].ns{background:var(--ns-bg);border-color:var(--ns);color:var(--ink)}
-.remark{grid-column:1/-1;width:100%;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);
-  font:15px Barlow,Arial,sans-serif;padding:7px 9px}
-.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
-  padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;justify-content:center}
-.bar button{flex:1;max-width:240px}
-.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
-  padding:8px 14px;border-radius:6px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
-.toast.show{opacity:1}
-.hidden{display:none!important}
-.smsw{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
-.smsw .nm{flex:1 1 160px;min-width:0}
-.smsw .nm b{display:block}
-.smsw .nm small{color:var(--muted)}
-.smsw a.send{display:inline-block;background:var(--hivis);color:#1B1206;text-decoration:none;font-weight:700;border-radius:8px;padding:10px 16px}
-.smsw a.send.sent{background:var(--done-bg);color:var(--done);border:1px solid var(--done)}
-.smsw .rmw{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:.85rem;padding:6px 2px}
-.addw{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.addw input{flex:1 1 140px;min-width:0;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font:15px Barlow,Arial,sans-serif;padding:9px}
-.review{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:12px;margin-top:12px}
-.review h2{font:700 1.3rem "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:0 0 4px}
-.rv-sum{display:flex;flex-wrap:wrap;gap:8px 16px;font-weight:700;margin:6px 0 10px}
-.rv-sum .g{color:var(--done)} .rv-sum .r{color:var(--red)} .rv-sum .a{color:var(--nc)}
-.rv-grp{font:700 1.1rem "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:14px 0 6px}
-.rv-row{display:flex;gap:10px;align-items:flex-start;border-radius:6px;padding:8px 10px;margin:5px 0;border-left:5px solid;font-size:.92rem}
-.rv-row.ok{background:var(--done-bg);border-color:var(--done)}
-.rv-row.dup{background:var(--red-bg);border-color:var(--red)}
-.rv-row.unk{background:var(--nc-bg);border-color:var(--nc)}
-.rv-row.chk{background:var(--ns-bg);border-color:#4FA3E0}
-.rv-row.newc{background:#2E2140;border-color:#B58CF0}
-:root[data-theme="light"] .rv-row.newc{background:#F1E8FD}
-@media (prefers-color-scheme: light){ .rv-row.newc{background:#F1E8FD} }
-.rv-row.newc .tag2,.rv-sum .p,.newcw{color:#9A6AE0}
-.rv-row .newline{color:#9A6AE0;font-weight:700}
-.newcw{grid-column:1/-1;font-size:.82rem;font-weight:700;background:rgba(154,106,224,.14);border-radius:6px;padding:6px 8px}
-.rv-row.chk .tag2{color:#4FA3E0}
-.rv-sum .b{color:#4FA3E0}
-.rv-row b{display:block}
-.rv-row .tag2{font-weight:700;font-size:.8rem}
-.rv-row.ok .tag2{color:var(--done)} .rv-row.dup .tag2{color:var(--red)} .rv-row.unk .tag2{color:var(--nc)}
-.rv-row small{display:block;color:var(--muted)}
-.rv-row small.wk{font-weight:600;margin-top:2px}
-.rv-row small.wk.done{color:var(--red)} .rv-row small.wk.todo{color:var(--done)}
-.rv-row input{width:20px;height:20px;margin-top:2px;flex:none}
-.item.isdup{box-shadow:inset 4px 0 0 var(--red);padding-left:10px}
-.review label{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:.92rem}
-.review input{width:20px;height:20px;margin-top:2px;flex:none}
-.review small{display:block;color:var(--muted)}
-.dupw{grid-column:1/-1;font-size:.82rem;font-weight:600;color:var(--red);background:var(--red-bg);border-radius:6px;padding:6px 8px}
-.where{font-size:.85rem;font-weight:600;color:var(--muted);margin:-4px 0 6px}
-.minfo{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin-top:-4px}
-.minfo.bad{color:var(--nc);font-weight:600}
-.seg button.tick{font-weight:600}
-.seg.steps{flex-wrap:wrap}
-.seg.steps button{flex:1 1 calc(50% - 6px)}
-.seg button.tick[aria-pressed="true"]{background:var(--done-bg);border-color:var(--done);color:var(--done)}
-.dstat{grid-column:1/-1;font-size:.85rem;font-weight:600;margin-top:-2px}
-.dstat.done{color:var(--done)} .dstat.nc{color:var(--nc)} .dstat.ns{color:var(--muted)}
-.extra{border-left-color:#4FA3E0}
-.tag{display:inline-block;font:600 .75rem Barlow,Arial,sans-serif;color:#1B2631;background:#8EC5EE;border-radius:4px;padding:1px 7px;margin-left:8px;vertical-align:middle}
-.addbox{background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:12px;margin-bottom:14px}
-.addbox h2{font:700 1.2rem "Barlow Condensed","Arial Narrow",Arial,sans-serif;margin:0 0 4px}
-.addbox label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
-.addbox input,.addbox select{width:100%;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font:15px Barlow,Arial,sans-serif;padding:9px}
-.addbox select option{color:#1B2631}
-.rmx{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:.8rem;padding:4px 0;justify-self:start}
-.by{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin-top:-2px}
-.who{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.9rem;color:var(--muted);margin:0 0 12px}
-.who b{color:var(--ink)}
-.linkbtn{background:none;border:0;padding:4px 2px;color:var(--hivis);text-decoration:underline;font-size:.9rem}
-.emailin{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:17px Barlow,Arial,sans-serif;padding:12px}
-.sync{font-size:.9rem;font-weight:600;color:var(--muted);margin:-8px 0 14px}
-.sync.ok{color:var(--done)} .sync.bad{color:var(--nc)}
-.report{width:100%;min-height:180px;font:14px/1.45 Barlow,Arial,sans-serif;margin-top:6px}
-.group h2.rh{border:0}
-.empty{color:var(--muted)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:420px){.seg button{font-size:.82rem;padding:8px 4px}}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="stripe" aria-hidden="true"></div>
+/**
+ * Night Shift Progress – Google Sheet sync
+ * Sheet tabs created automatically:
+ *   "Night Shift Log"      -> Date | Activity | Cell | Location (from master) | Status | Steps Done | Steps Pending | Remark | Last Updated | Entered By (Email)
+ *   "_nightshift_state"    -> hidden, keeps the current plan so any phone can continue it
+ */
+// >>> Paste your Google Sheet link between the quotes <<<
+// (or, better: Project Settings > Script Properties > SHEET_URL, so it survives code updates)
+// AI reading of the plan needs a free Gemini key in Script Properties > GEMINI_API_KEY
+const SHEET_URL = '';
 
-  <section id="emailView" class="hidden">
-    <h1>Who is updating?</h1>
-    <p class="sub">Enter your email once on this phone. It is saved here and written in the sheet with every update you make.</p>
-    <input class="emailin" id="emailIn" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" aria-label="Your email">
-    <div class="row-btns"><button class="primary" id="emailBtn">Save and continue</button></div>
-    <p id="emailErr" class="empty"></p>
-  </section>
+// Potline Cell Status Register (cell master) – a separate file. Can be changed in Script Properties > MASTER_URL
+const MASTER_URL = 'https://docs.google.com/spreadsheets/d/1EzsZfKJSG8XZScTQrBmV6isyFbjIkfOcI6LvCLGmpPA/edit';
 
-  <p class="who hidden" id="who">Updating as <b id="whoEmail"></b><button class="linkbtn" id="whoChange">Change</button></p>
+const LOG_SHEET = 'Night Shift Log';
+const STATE_SHEET = '_nightshift_state';
+const STATUS_NAMES = { done: 'Completed', nc: 'Work in Progress', ns: 'Not Started' };
 
-  <section id="pasteView">
-    <h1>Night shift progress</h1>
-    <p class="sub">Paste the plan from the WhatsApp group. Each cell becomes its own line to mark.</p>
-    <textarea id="input" placeholder="NIGHT SHIFT PLAN 06.10.2026
-Metal breaking PL01 SEC04
-1A-175,195,196
-..."></textarea>
-    <div class="row-btns">
-      <button class="primary" id="makeBtn">🤖 Make tracker with AI</button>
-      <button id="backBtn" class="hidden">Back to current tracker</button>
-      <button id="skipAi" class="hidden">Skip AI – read without AI</button>
-    </div>
-    <p id="err" class="empty"></p>
-    <p id="aiWhy" class="empty hidden" style="font-size:.85rem;word-break:break-word"></p>
-    <div id="review" class="review hidden">
-      <h2>Check before creating</h2>
-      <p class="sub" style="margin:0">☑ Ticked = goes into tonight's plan. ☐ Unticked = left out. 🟢 Green = to do tonight. 🔴 Red = already done (Cell Status Register or an earlier shift) – left out unless you tick it; if only some steps are done, it is ticked and those steps come pre-marked. 🔵 Blue = check the register line yourself. 🆕 Purple = NEW cell – relining / deck plate is usually not needed, cross-check. 🟠 Orange = cell not found in the register.</p>
-      <div class="rv-sum" id="rvSum"></div>
-      <div id="dupList"></div>
-      <div class="row-btns"><button class="primary" id="revOk">Create plan</button><button id="revCancel">Cancel</button></div>
-    </div>
-  </section>
+function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k) || ''; }
 
-  <section id="smsView" class="hidden">
-    <h1>Send plan by SMS</h1>
-    <p class="sub">For workers with keypad phones. Each <b>Send</b> button opens your phone's Messages app with the number and the plan already filled in – just press Send there, then come back for the next worker.</p>
-    <textarea id="smsText" aria-label="SMS text" style="min-height:220px"></textarea>
-    <p class="sub" id="smsCount" style="margin:6px 0 10px"></p>
-    <div id="smsList"><p class="empty">Loading workers…</p></div>
-    <div class="group" style="margin-top:14px"><h2>Add a worker</h2>
-      <div class="addw"><input id="wName" placeholder="Name" aria-label="Worker name"><input id="wPhone" type="tel" inputmode="tel" placeholder="Phone e.g. 0501234567" aria-label="Worker phone"><button class="primary" id="wAdd">Add</button></div>
-      <p id="wErr" class="empty" style="margin:6px 0"></p>
-      <p class="sub" style="margin:0">The list is saved in the "Workers" tab of your sheet. Write "No" in the Active column to pause someone.</p>
-    </div>
-    <div class="row-btns"><button id="smsBack">Back to tracker</button></div>
-  </section>
-
-  <section id="trackView" class="hidden">
-    <div class="row-btns" style="margin:0 0 6px"><button class="primary" id="topNewBtn">🤖 New plan with AI</button><button id="smsBtn">📱 SMS plan to workers</button></div>
-    <h1 id="title"></h1>
-    <p class="sub">Mark each line Completed, Work in Progress or Not started. Every change saves to the Google Sheet.</p>
-    <div class="meter" aria-hidden="true"><span id="mDone" style="background:var(--done)"></span><span id="mNc" style="background:var(--nc)"></span></div>
-    <div class="counts">
-      <span class="c-done"><b id="nDone">0</b>Completed</span>
-      <span class="c-nc"><b id="nNc">0</b>Work in Progress</span>
-      <span class="c-ns"><b id="nNs">0</b>Not started</span>
-    </div>
-    <p class="sync" id="sync">Not saved to sheet yet</p>
-    <div id="groups"></div>
-    <div class="addbox">
-      <h2>Add extra work</h2>
-      <p class="sub" style="margin:0">Work done tonight that was not in the target.</p>
-      <label for="xName">Work done</label>
-      <input id="xName" placeholder="e.g. Anode change PL01 SEC05">
-      <label for="xCells">Cells (optional)</label>
-      <input id="xCells" placeholder="e.g. 1A-170,171 or From 1A120 to 1A125">
-      <label for="xStatus">Status</label>
-      <select id="xStatus"><option value="done">Completed</option><option value="nc">Work in Progress</option><option value="ns">Not started</option></select>
-      <label for="xRemark">Remark (optional)</label>
-      <input id="xRemark" placeholder="Remark">
-      <div class="row-btns"><button class="primary" id="xAdd">Add extra work</button></div>
-      <p id="xErr" class="empty" style="margin:6px 0 0"></p>
-    </div>
-    <div class="group"><h2>Text report</h2>
-      <textarea class="report" id="reportBox" readonly aria-label="Text report"></textarea>
-    </div>
-    <div class="group"><h2>AI report</h2>
-      <p class="sub" style="margin:0 0 8px">AI writes a clean English report for management from tonight's progress. It is also saved in the "AI Report" tab.</p>
-      <div class="row-btns" style="margin:0 0 8px"><button class="primary" id="aiRepBtn">🤖 Make AI report</button><button id="aiCopyBtn" class="hidden">Copy AI report</button></div>
-      <p id="aiRepMsg" class="empty" style="margin:0"></p>
-      <textarea class="report hidden" id="aiRepBox" aria-label="AI report"></textarea>
-    </div>
-    <div class="row-btns"><button id="saveBtn">Save to sheet now</button><button id="newBtn">New plan</button></div>
-  </section>
-</div>
-
-<div class="bar hidden" id="bar">
-  <button class="primary" id="copyBtn">Copy report</button>
-  <button id="shareBtn" class="hidden">Share</button>
-</div>
-<div class="toast" id="toast" role="status"></div>
-
-<script>
-const KEY='nightshift:current';
-let state=null;
-const $=id=>document.getElementById(id);
-let n=0; const uid=()=>'i'+(Date.now().toString(36))+(n++);
-
-// heading lines: NIGHT SHIFT PLAN, DAY SHIFT PLAN, D SHIFT PLAN, A-SHIFT PLAN, "Plan 06.10.2026" …
-function isHeading(l){
-  return /\bshift\b.*\bplan\b|\bplan\b.*\bshift\b/i.test(l)
-    || /^(work\s*)?plan\b[\s:-]*\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}\s*$/i.test(l)
-    || /^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}$/.test(l);
-}
-// cell numbers written like "1A-175,195,196", "2B 180,182,188", "From 1A186 to 1A166", "1A-120 to 125"
-function cellsFrom(spec){
-  spec=spec.trim().replace(/[.;]+$/,'');
-  const rm=spec.match(/^(?:from\s*)?(\d+[A-Za-z])\s*-?\s*(\d+)\s*(?:to|-|–)\s*(?:\d+[A-Za-z])?\s*-?\s*(\d+)$/i);
-  if(rm){
-    const pre=rm[1].toUpperCase(), a=+rm[2], b=+rm[3], step=a<=b?1:-1, out=[];
-    if(Math.abs(b-a)>200) return null;
-    for(let k=a; step>0?k<=b:k>=b; k+=step) out.push(pre+'-'+k);
-    return out;
-  }
-  if(!/^\d+[A-Za-z]\s*-?\s*\d+(\s*(,|&|\/|and|\s)\s*(\d+[A-Za-z]\s*-?\s*)?\d+)*$/i.test(spec)) return null;
-  let pre=null; const out=[];
-  const re=/(\d+[A-Za-z])?\s*-?\s*(\d+)/g; let m;
-  while((m=re.exec(spec))){
-    if(m[1]) pre=m[1].toUpperCase();
-    if(pre) out.push(pre+'-'+m[2]);
-  }
-  return out.length?out:null;
-}
-// an activity line that also carries its cells: "Deck plate PL02 SEC05 - 2B 180,182,188"
-function splitInline(l){
-  const re=/(?:^|[\s\-–:,(])(?=(?:from\s+)?\d+[A-Za-z]\b|(?:from\s+)?\d+[A-Za-z]\s*-?\s*\d)/gi;
-  let m;
-  while((m=re.exec(l))){
-    const at=m.index+(m[0].length?1:0);
-    const name=l.slice(0,at).replace(/[\s\-–:,(]+$/,'').trim();
-    if(!name||!/[A-Za-z]{2}/.test(name)){ if(re.lastIndex===m.index) re.lastIndex++; continue; }
-    const cells=cellsFrom(l.slice(at).replace(/\)$/,''));
-    if(cells) return {name,cells};
-    if(re.lastIndex===m.index) re.lastIndex++;
-  }
-  return null;
-}
-// cells written BEFORE the work: "2A-137,138,241, air blowing remaining", "2B-140airblowing remaining"
-function splitLeading(l){
-  const m=l.match(/^((?:from\s*)?\d+[A-Za-z]\s*-?\s*\d+(?:\s*(?:,|&|\/|\band\b|\bto\b|–)\s*(?:\d+[A-Za-z]\s*-?\s*)?\d+)*)\s*[,:\-–]?\s*([A-Za-z].*)$/i);
-  if(!m) return null;
-  const cells=cellsFrom(m[1]);
-  if(!cells) return null;
-  let name=m[2].replace(/^(air)(blow)/i,'$1 $2').trim();
-  name=name.charAt(0).toUpperCase()+name.slice(1);
-  return {name,cells};
-}
-// a line that only names a place: "PL02", "SEC05", "PL02 SEC05", "Potline 2 Section 5", "PL 1 Sec 4 & Sec 5"
-function isLocation(l){
-  l=String(l).replace(/[\s:\-–]+$/,'');
-  return /^((pl|potline|sec|section|line|room)\s*-?\s*\d+\s*(,|&|and|-|–)?\s*)+$/i.test(l.trim());
-}
-function parse(text){
-  const lines=text.split(/\r?\n/).map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
-  let title='Night shift progress', groups=[], cur=null;
-  // same work written on several lines (e.g. "air blowing remaining") goes into one activity
-  const groupFor=name=>{
-    name=name.replace(/[\s\-–:,]+$/,'').replace(/\s+[-–:]\s*(?=(pl|potline|sec|section)\s*-?\s*\d)/ig,' ').replace(/\s+/g,' ').trim();
-    const key=name.toLowerCase().replace(/\s+/g,'');
-    let g=groups.find(x=>x.name.toLowerCase().replace(/\s+/g,'')===key);
-    if(!g){ g={name,items:[]}; groups.push(g); }
-    return g;
-  };
-  // a location line ("SEC05", "PL01 SEC05") after an activity
-  const placeLoc=l=>{
-    // "PL03:" (with colon), or a PL line when the activity already has its own PL, starts a new location block
-    const has=(x,re)=>re.test(x), PLre=/\b(pl|potline)\s*-?\s*\d/i, SECre=/\b(sec|section)\s*-?\s*\d/i;
-    const header=/[:\-–]\s*$/.test(l)||(cur&&!cur.locOnly&&!cur.items.length&&((has(l,PLre)&&has(cur.name,PLre))||(!has(l,PLre)&&has(l,SECre)&&has(cur.name,SECre))));
-    if(header){ cur=groupFor(l); cur.locOnly=true; return; }
-    if(cur&&!cur.locOnly&&!cur.items.length){ cur.name+=' '+l; cur.loc=((cur.loc||'')+' '+l).trim(); return; }
-    if(cur&&cur.base){
-      let loc=l;
-      if(/^(sec|section)\s*-?\s*\d/i.test(l)&&cur.loc) loc=(cur.loc.replace(/\b(sec|section)\s*-?\s*\d+.*$/i,'').trim()+' '+l).trim();
-      const base=cur.base;
-      cur=groupFor(base+' '+loc); if(!cur.base){ cur.base=base; cur.loc=loc; }
-      return;
-    }
-    cur=groupFor(l); cur.locOnly=true;
-  };
-  // a new activity line: if the line before was only a location ("PL02 SEC05") with no cells yet, join them
-  let ctxLoc='';
-  const activity=name=>{
-    let loc='';
-    if(cur&&cur.locOnly&&!cur.items.length){ loc=cur.name.replace(/[\s:\-–]+$/,''); groups.splice(groups.indexOf(cur),1); ctxLoc=loc; }
-    else if(/\b(pl|potline)\s*-?\s*\d/i.test(name)) ctxLoc='';
-    else if(ctxLoc) loc=ctxLoc;
-    name=name.replace(/[\s\-–:,]+$/,'').trim();
-    const g=groupFor(loc?name+' '+loc:name);
-    if(!g.base){ g.base=name; g.loc=loc; }
-    return g;
-  };
-  const add=(g,labels)=>labels.forEach(lab=>g.items.push({id:uid(),label:lab,status:'ns',remark:''}));
-  for(const l of lines){
-    if(isHeading(l)){ if(title==='Night shift progress') title=l; continue; }
-    const only=cellsFrom(l);
-    if(only && cur){ add(cur,only); continue; }
-    if(/^from\b/i.test(l) && cur){ add(cur,[l.replace(/^from\s*/i,'')]); continue; }
-    const inl0=splitLeading(l)||splitInline(l);
-    if(inl0&&isLocation(inl0.name)&&cur&&!cur.locOnly){
-      // "PL01 SEC05 1B-194" under an activity = that activity at this location
-      placeLoc(inl0.name); add(cur,inl0.cells.filter(c=>!cur.items.some(it=>it.label===c))); continue;
-    }
-    if(isLocation(l)){ placeLoc(l); continue; }
-    const lead=splitLeading(l);
-    if(lead&&cur&&!cur.locOnly&&!hasWork(lead.name)){
-      const note=l.slice(l.search(/[A-Za-z]{2}/)).trim();
-      lead.cells.forEach(c=>{ if(!cur.items.some(it=>it.label===c)) cur.items.push({id:uid(),label:c,status:'ns',remark:note}); });
-      continue;
-    }
-    const inl=lead||splitInline(l);
-    if(inl){ cur=activity(inl.name); add(cur,inl.cells.filter(c=>!cur.items.some(it=>it.label===c))); continue; }
-    cur=activity(l);
-  }
-  groups.forEach(g=>{ delete g.base; delete g.loc; delete g.locOnly; });
-  groups.forEach(g=>{ if(!g.items.length) g.items.push({id:uid(),label:'Activity',status:'ns',remark:''}); const st=detectSteps(g.name); if(st){ g.steps=st; g.items.forEach(it=>it.done={}); } });
-  const dm=title.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
-  const d=new Date();
-  const date=dm?(dm[1].padStart(2,'0')+'.'+dm[2].padStart(2,'0')+'.'+(dm[3].length===2?'20'+dm[3]:dm[3]))
-    :(String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear());
-  return {planId:uid()+Math.random().toString(36).slice(2,8),title,date,groups,rev:0};
+function ss_() {
+  const url = SHEET_URL || prop_('SHEET_URL');
+  if (url) return SpreadsheetApp.openByUrl(url);
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (!active) throw new Error('Sheet not linked. Paste your Google Sheet link in SHEET_URL (Code.gs).');
+  return active;
 }
 
-let pending={}, inFlight=false, syncTimer=null, oldIndex={};
-const findOld=id=>oldIndex[id];
-function save(){
-  try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){}
-  $('reportBox').value=report();
+// Run this once from the editor: gives permission and creates the "Night Shift Log" tab
+function setup() {
+  const ss = ss_();
+  getLogSheet_(ss);
+  Logger.log('Connected to: ' + ss.getName());
 }
-const hasWork=t=>STEP_WORDS.some(([re])=>re.test(t));
-const hasSteps=g=>Array.isArray(g.steps)&&g.steps.length>1;
-function stepStatus(g,it){ const d=it.done||{}, n=g.steps.filter(x=>d[x]).length; return n===g.steps.length?'done':(n?'nc':'ns'); }
-// words that mark separate kinds of work in one activity line
-const STEP_WORDS=[[/break/i,'Breaking'],[/chip/i,'Chipping'],[/air\s*blow/i,'Air Blowing'],[/re-?lin/i,'Relining'],[/deck\s*plate/i,'Deck Plate'],[/clean/i,'Cleaning'],[/hand\s*rail/i,'Handrail'],[/concrete\s*block/i,'Concrete Block'],[/ramm/i,'Ramming'],[/weld/i,'Welding'],[/grout/i,'Grouting']];
-function detectSteps(name){
-  const found=[];
-  STEP_WORDS.forEach(([re,label])=>{ const m=name.search(re); if(m>=0) found.push([m,label]); });
-  found.sort((a,b)=>a[0]-b[0]);
-  let steps=found.map(f=>f[1]);
-  if(steps.length===1&&steps[0]==='Breaking') steps=['Breaking','Chipping'];
-  return steps.length>1?steps:null;
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('Night Shift Progress')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
-function normalize(st){
-  if(!st||!st.groups) return st;
-  const heads=st.groups.filter(g=>isHeading(g.name||'')&&g.items.every(it=>it.label==='Activity'&&it.status==='ns'));
-  if(heads.length){
-    // keep the heading (and its date) as the title before dropping it
-    if(!/\d/.test(st.title||'')||/^night shift progress$/i.test(st.title||'')) st.title=heads[0].name;
-    const dm=heads[0].name.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
-    if(dm) st.date=dm[1].padStart(2,'0')+'.'+dm[2].padStart(2,'0')+'.'+(dm[3].length===2?'20'+dm[3]:dm[3]);
-    st.groups=st.groups.filter(g=>heads.indexOf(g)<0);
-  }
-  st.groups.forEach(g=>{
-    if(!g.steps&&/break/i.test(g.name||'')){ g.steps=['Breaking','Chipping']; g.items.forEach(it=>{ it.done={Breaking:!!it.brk,Chipping:!!it.chp}; }); }
-    if(hasSteps(g)) g.items.forEach(it=>{ it.done=it.done||{}; });
+
+function autoEmail_() {
+  try { return String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) { return ''; }
+}
+
+// Called by the page on open: returns the signed-in Google email ('' if Google hides it)
+function whoAmI() { return autoEmail_(); }
+
+function getState() {
+  return withLock_(() => {
+    const st = readState_(ss_());
+    return st ? JSON.stringify(st) : null;
   });
+}
+
+// Plans saved by the older version had no plan ID, so every tap was rejected. Fix them here.
+function readState_(ss) {
+  const sh = ss.getSheetByName(STATE_SHEET);
+  const v = sh ? sh.getRange('A1').getValue() : '';
+  let st = null;
+  try { st = v ? JSON.parse(v) : null; } catch (e) { return null; }
+  if (!st || !st.groups) return null;
+  let fixed = false;
+  if (!st.planId) { st.planId = 'P' + Date.now().toString(36); fixed = true; }
+  let k = 0;
+  st.groups.forEach(g => g.items.forEach(it => { if (!it.id) { it.id = st.planId + '-' + (k++); fixed = true; } }));
+  if (typeof st.rev !== 'number') { st.rev = 1; fixed = true; }
+  // plans made by older versions may hold the heading ("Day shift plan: 19.10.2026") as an activity: drop it
+  const before = st.groups.length;
+  const dropped = st.groups.filter(g => isHeading_(g.name) && g.items.every(it => it.label === 'Activity' && it.status === 'ns'));
+  if (dropped.length) {
+    st.groups = st.groups.filter(g => dropped.indexOf(g) < 0);
+    dropped.forEach(g => deleteLogRows_(ss, st.date, actName_(g)));
+    // the heading carried the shift name and date: keep them as the title
+    if (!/\d/.test(st.title || '') || /^night shift progress$/i.test(st.title || '')) st.title = dropped[0].name;
+    fixed = true;
+  }
+  st.groups.forEach(g => {
+    if (!g.steps && /break/i.test(g.name || '')) {
+      g.steps = ['Breaking', 'Chipping'];
+      g.items.forEach(it => { it.done = { Breaking: !!it.brk, Chipping: !!it.chp }; delete it.brk; delete it.chp; });
+      fixed = true;
+    }
+  });
+  if (fixed) writeState_(ss, st);
   return st;
 }
-function queue(it){
-  pending[it.id]={id:it.id,status:it.status,remark:it.remark,done:it.done?Object.assign({},it.done):undefined};
-  save();
-  setSync('Saving…','');
-  clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,800);
-}
-const EKEY='nightshift:email';
-let memEmail='';
-function getEmail(){ try{ return localStorage.getItem(EKEY)||memEmail; }catch(e){ return memEmail; } }
-function validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
-function setSync(t,c){ const el=$('sync'); el.textContent=t; el.className='sync '+c; }
-const hasGS=()=>typeof google!=='undefined'&&google.script;
-function stamp(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
 
-// send only the lines changed on this device
-function syncNow(){
-  clearTimeout(syncTimer);
-  if(!validEmail(getEmail())){ setSync('Enter your email to save','bad'); show('email'); return; }
-  if(!state||!hasGS()){ setSync('Sheet not connected – open this from the Apps Script link','bad'); return; }
-  const ids=Object.keys(pending);
-  if(!ids.length||inFlight) return;
-  const batch=ids.map(k=>pending[k]); pending={}; inFlight=true;
-  oldIndex={}; state.groups.forEach(g=>g.items.forEach(it=>oldIndex[it.id]=g.name+'|'+it.label));
-  google.script.run
-    .withSuccessHandler(j=>{
-      inFlight=false;
-      const r=JSON.parse(j);
-      if(r.stale){
-        // plan changed elsewhere: take the sheet's plan and resend these taps if the same cells exist there
-        const keep={}; batch.forEach(c=>keep[c.id]=c);
-        adopt(r.state,true);
-        if(r.state&&r.state.groups){
-          const lab={}; batch.forEach(c=>{ const it=findOld(c.id); if(it) lab[it]=c; });
-          r.state.groups.forEach(g=>g.items.forEach(it=>{ const c=lab[g.name+'|'+it.label]; if(c){ Object.assign(it,{status:c.status,remark:c.remark}); if(c.done) it.done=c.done; pending[it.id]={id:it.id,status:c.status,remark:c.remark,done:c.done}; } }));
-          oldIndex={}; render();
-          if(Object.keys(pending).length){ syncNow(); return; }
-        }
-        setSync('Plan refreshed from sheet','');
-        return;
-      }
-      adopt(r.state);
-      setSync('Saved to sheet ✓ '+stamp(),'ok');
-      if(Object.keys(pending).length) syncNow();
-    })
-    .withFailureHandler(e=>{
-      inFlight=false;
-      batch.forEach(c=>{ if(!pending[c.id]) pending[c.id]=c; });
-      setSync('Not saved – '+(e&&e.message||'check internet')+'. Tap "Save to sheet now".','bad');
-    })
-    .updateItems(state.planId, batch, getEmail());
+function writeState_(ss, state) {
+  let st = ss.getSheetByName(STATE_SHEET);
+  if (!st) { st = ss.insertSheet(STATE_SHEET); st.hideSheet(); }
+  const json = JSON.stringify(state);
+  st.getRange('A1').setValue(json);
+  return json;
 }
 
-// take the sheet's copy as the truth, keeping any taps not yet sent
-let renderWaiting=false;
-function adopt(s,force){
-  if(!s||!s.groups){ return; }
-  normalize(s);
-  if(!force && state && state.planId===s.planId && (s.rev||0)<(state.rev||0)) return;
-  const same=state&&state.planId===s.planId;
-  if(same){
-    s.groups.forEach(g=>g.items.forEach(it=>{ const p=pending[it.id]; if(p){ Object.assign(it,{status:p.status,remark:p.remark}); if(p.done) it.done=p.done; } }));
-  } else pending={};
-  state=s; save();
-  const a=document.activeElement;
-  if(a&&a.classList&&a.classList.contains('remark')){ renderWaiting=true; updateCounts(); return; }
-  render();
+function who_(userEmail) {
+  const by = autoEmail_() || String(userEmail || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(by)) throw new Error('Enter your email first');
+  return by;
 }
 
-// check the sheet for other people's updates
-function poll(){
-  if(!hasGS()||inFlight||document.hidden) return;
-  if(Object.keys(pending).length) return;
-  google.script.run.withSuccessHandler(j=>{
-    let s=null; try{ s=j?JSON.parse(j):null; }catch(e){}
-    if(!s) return;
-    if(!state||state.planId!==s.planId||(s.rev||0)!==(state.rev||0)){ adopt(s,true); setSync('Up to date ✓ '+stamp(),'ok'); }
-  }).getState();
+function withLock_(fn) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try { return fn(); } finally { lock.releaseLock(); }
 }
-setInterval(poll,8000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) poll(); });
-window.addEventListener('focus',poll);
-document.addEventListener('focusout',e=>{
-  if(renderWaiting&&e.target.classList&&e.target.classList.contains('remark')){
-    setTimeout(()=>{ const a=document.activeElement; if(!(a&&a.classList&&a.classList.contains('remark'))){ renderWaiting=false; render(); } },300);
-  }
-});
-function load(){ try{ const s=localStorage.getItem(KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
 
-function counts(){
-  const c={done:0,nc:0,ns:0,total:0};
-  state.groups.forEach(g=>g.items.forEach(i=>{c[i.status]++;c.total++;}));
-  return c;
+function now_(ss) {
+  return Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'dd.MM.yyyy HH:mm');
 }
-function updateCounts(){
-  const c=counts();
-  $('nDone').textContent=c.done; $('nNc').textContent=c.nc; $('nNs').textContent=c.ns;
-  $('mDone').style.width=(c.total?c.done/c.total*100:0)+'%';
-  $('mNc').style.width=(c.total?c.nc/c.total*100:0)+'%';
-  document.querySelectorAll('#groups .group').forEach((el,gi)=>{
-    const g=state.groups[gi], d=g.items.filter(i=>i.status==='done').length;
-    el.querySelector('.gcount').textContent=d+'/'+g.items.length;
+
+// A new plan pasted on any device becomes the one plan everyone sees
+function newPlan(json, userEmail) {
+  const by = who_(userEmail);
+  return withLock_(() => {
+    const ss = ss_();
+    const old = readState_(ss);
+    const plan = JSON.parse(json);
+    plan.rev = (old && old.rev ? old.rev : 0) + 1;
+    enrich_(plan.groups, master_(ss));
+    const now = now_(ss);
+    const rows = [];
+    plan.groups.forEach(g => g.items.forEach(it => { it.by = it.by || ''; it.at = it.at || ''; rows.push({ g: g, it: it }); }));
+    writeLog_(ss, plan.date, rows, now, by, true);
+    return writeState_(ss, plan);
   });
 }
 
-const STAT=[['done','✓ Completed','Completed'],['nc','⏳ Work in Progress','Work in Progress'],['ns','Not started','Not started']];
-function render(){
-  $('title').textContent=titleText(false);
-  const wrap=$('groups'); wrap.innerHTML='';
-  state.groups.forEach(g=>{
-    const box=document.createElement('div'); box.className='group'+(g.extra?' extra':'');
-    const h=document.createElement('h2'); h.textContent=g.name;
-    if(g.extra){ const tg=document.createElement('span'); tg.className='tag'; tg.textContent='Extra'; h.appendChild(tg); }
-    const gc=document.createElement('span'); gc.className='gcount'; h.appendChild(gc);
-    box.appendChild(h);
-    if(g.where){ const w=document.createElement('div'); w.className='where'; w.textContent='📍 '+g.where; box.appendChild(w); }
-    if(!g.extra){ const rg=document.createElement('button'); rg.className='rmx'; rg.textContent='Remove this activity'; rg.onclick=()=>removeGroup(g); box.appendChild(rg); }
-    g.items.forEach(it=>{
-      const row=document.createElement('div'); row.className='item'+(it.dup?' isdup':'');
-      const cell=document.createElement('div'); cell.className='cell'; cell.textContent=it.label;
-      const seg=document.createElement('div'); seg.className='seg';
-      let dst=null;
-      if(hasSteps(g)){
-        const WORD={done:'Completed',nc:'Work in Progress',ns:'Not started'};
-        it.done=it.done||{};
-        seg.classList.add('steps');
-        dst=document.createElement('div');
-        const paint=()=>{ const d=g.steps.filter(x=>it.done[x]).length; dst.className='dstat '+it.status; dst.textContent='Status: '+WORD[it.status]+' ('+d+'/'+g.steps.length+' steps)'; };
-        g.steps.forEach(lab=>{
-          const b=document.createElement('button'); b.className='tick';
-          const set=()=>{ b.textContent=(it.done[lab]?'✓ ':'☐ ')+lab; b.setAttribute('aria-pressed',!!it.done[lab]); };
-          set(); b.setAttribute('aria-label',lab+' – '+it.label);
-          b.onclick=()=>{ if(!it.done[lab]&&it.dup&&(!it.dupSteps||!it.dupSteps.length||it.dupSteps.indexOf(lab)>=0)&&!confirm(lab+' on '+it.label+' was already done:\n'+it.dup+'\n\nMark it again?')) return; it.done[lab]=!it.done[lab]; it.status=stepStatus(g,it); set(); paint(); queue(it); updateCounts(); };
-          seg.appendChild(b);
-        });
-        paint();
-      } else {
-      STAT.forEach(([k,sym,lab])=>{
-          const b=document.createElement('button'); b.className=k; b.textContent=sym;
-          b.setAttribute('aria-label',lab+' – '+it.label); b.title=lab;
-          b.setAttribute('aria-pressed',it.status===k);
-          b.onclick=()=>{ if(k!=='ns'&&it.status==='ns'&&it.dup&&!confirm(it.label+' was already done:\n'+it.dup+'\n\nMark it again?')) return; it.status=k; seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); queue(it); updateCounts(); };
-          seg.appendChild(b);
-        });
-      }
-      const rm=document.createElement('input'); rm.className='remark'; rm.placeholder='Remark'; rm.value=it.remark;
-      rm.setAttribute('aria-label','Remark for '+it.label);
-      rm.oninput=()=>{ it.remark=rm.value; queue(it); };
-      row.append(cell);
-      if(it.loc||it.unknown){
-        const mi=document.createElement('div');
-        if(it.unknown){ mi.className='minfo bad'; mi.textContent='⚠ Not found in cell master – check the cell number'; }
-        else{
-          const st=Object.entries(it.loc.st||{}).map(([k,v])=>k+': '+v).join(' · ');
-          mi.className='minfo';
-          mi.textContent='PL'+it.loc.pl+' · '+it.loc.room+' · '+it.loc.sec+(it.loc.type?' · '+it.loc.type:'')+(st?' — Master: '+st:'');
-        }
-        row.appendChild(mi);
-      }
-      if(it.newCell||(it.loc&&/new/i.test(it.loc.type||''))){ const nw=document.createElement('div'); nw.className='newcw'; nw.textContent='🆕 New cell – cross-check if this work is really needed'; row.appendChild(nw); }
-      if(it.dup){ const dw=document.createElement('div'); dw.className='dupw'; dw.textContent='⚠ Already done earlier: '+it.dup; row.appendChild(dw); }
-      row.append(seg);
-      if(dst) row.appendChild(dst);
-      row.appendChild(rm);
-      if(g.extra){ const x=document.createElement('button'); x.className='rmx'; x.textContent='Remove this extra line'; x.onclick=()=>removeExtra(it); row.appendChild(x); }
-      if(it.by){ const w=document.createElement('div'); w.className='by'; w.textContent='Last update: '+it.by+(it.at?' · '+it.at:''); row.appendChild(w); }
-      box.appendChild(row);
+// Only the lines that were changed are sent, so two people never undo each other's work
+function updateItems(planId, changes, userEmail) {
+  const by = who_(userEmail);
+  return withLock_(() => {
+    const ss = ss_();
+    const state = readState_(ss);
+    if (!state || String(state.planId) !== String(planId || '')) return JSON.stringify({ stale: true, state: state });
+    const now = now_(ss);
+    const byId = {};
+    state.groups.forEach(g => g.items.forEach(it => { byId[it.id] = { g: g, it: it }; }));
+    const rows = [];
+    (changes || []).forEach(c => {
+      const hit = byId[c.id];
+      if (!hit) return;
+      if (c.status) hit.it.status = c.status;
+      if (typeof c.remark === 'string') hit.it.remark = c.remark;
+      if (c.done && typeof c.done === 'object') hit.it.done = c.done;
+      hit.it.by = by; hit.it.at = now;
+      rows.push(hit);
     });
-    wrap.appendChild(box);
-  });
-  updateCounts();
-  $('reportBox').value=report();
-}
-
-function show(view){
-  if(view!=='email' && !validEmail(getEmail())){ pendingView=view; view='email'; }
-  $('emailView').classList.toggle('hidden',view!=='email');
-  $('who').classList.toggle('hidden',view==='email');
-  $('whoEmail').textContent=getEmail();
-  $('smsView').classList.toggle('hidden',view!=='sms');
-  $('pasteView').classList.toggle('hidden',view!=='paste');
-  $('trackView').classList.toggle('hidden',view!=='track');
-  $('bar').classList.toggle('hidden',view!=='track');
-  $('backBtn').classList.toggle('hidden',!(view==='paste'&&state));
-  window.scrollTo(0,0);
-}
-
-// title always carries the plan date
-function titleText(upper){
-  let t=String(state.title||'Night shift progress').replace(/plan/i,upper?'PROGRESS':'progress');
-  if(state.date&&!/\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}/.test(t)) t+=' '+state.date;
-  return upper?t.toUpperCase():t;
-}
-function report(){
-  const c=counts(), icon={done:'✅',nc:'🔄',ns:'⬜'}, word={done:'Completed',nc:'Work in Progress',ns:'Not started'};
-  let t='*'+titleText(true)+'*\n';
-  t+=`Completed ${c.done} | Work in Progress ${c.nc} | Not started ${c.ns} (Total ${c.total})\n`;
-  const tg=state.groups.filter(g=>!g.extra), xg=state.groups.filter(g=>g.extra);
-  tg.concat(xg).forEach((g,gi)=>{
-    if(g.extra&&gi===tg.length) t+='\n*➕ EXTRA WORK (not in target)*\n';
-    t+='\n*'+g.name+'*\n';
-    if(g.where) t+='📍 '+g.where+'\n';
-    if(hasSteps(g)) t+='_'+g.steps.map(x=>x+' '+g.items.filter(i=>(i.done||{})[x]).length+'/'+g.items.length).join(' | ')+'_\n';
-    g.items.forEach(i=>{
-      const lab=(g.items.length===1&&i.label==='Activity')?'':i.label;
-      const what=hasSteps(g)?g.steps.map(x=>x+' '+((i.done||{})[x]?'✓':'✗')).join(' | '):word[i.status];
-      t+=icon[i.status]+(lab?' '+lab+' –':'')+' '+what+(i.remark?' ('+i.remark+')':'')+(i.unknown?' ⚠ not in cell master':'')+(i.dup?' ⚠ done earlier':'')+((i.newCell||(i.loc&&/new/i.test(i.loc.type||'')))?' 🆕 new cell':'')+'\n';
-    });
-  });
-  return t.trim();
-}
-
-function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1800); }
-
-async function copy(text){
-  try{ await navigator.clipboard.writeText(text); return true; }
-  catch(e){
-    const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
-    let ok=false; try{ ok=document.execCommand('copy'); }catch(_){}
-    ta.remove(); return ok;
-  }
-}
-
-function fromAi(ai,fallbackTitle){
-  const d=new Date();
-  const date=ai.date&&/^\d{2}\.\d{2}\.\d{4}$/.test(ai.date)?ai.date:(String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear());
-  const groups=ai.groups.filter(g=>!(isHeading(g.name)&&!(g.cells&&g.cells.length))).map(g=>{
-    const notes=g.notes||{};
-    const items=(g.cells.length?g.cells:['Activity']).map(c=>({id:uid(),label:c,status:'ns',remark:String(notes[c]||'')}));
-    const out={name:g.name,items};
-    if(g.steps&&g.steps.length>1){ out.steps=g.steps; items.forEach(it=>it.done={}); }
-    return out;
-  });
-  if(!groups.length) throw new Error('empty');
-  return {planId:uid()+Math.random().toString(36).slice(2,8),title:ai.title||fallbackTitle,date,groups,rev:0};
-}
-let aiWhy='';
-function readPlan(txt,done){
-  aiWhy='';
-  const local=parse(txt);
-  if(!hasGS()){ done(local,'basic'); return; }
-  // show how long the AI is taking; offer to skip it, and stop waiting after 90 s
-  let finished=false, sec=0;
-  const finish=(p,how)=>{ if(finished) return; finished=true; clearInterval(tick); $('skipAi').classList.add('hidden'); done(p,how); };
-  const tick=setInterval(()=>{
-    sec++; $('err').textContent='🤖 AI is reading the plan… '+sec+' s';
-    if(sec===10) $('skipAi').classList.remove('hidden');
-    if(sec>=90){ aiWhy='AI took too long (over 90 s)'; finish(local,'basic'); }
-  },1000);
-  $('err').textContent='🤖 AI is reading the plan…';
-  $('skipAi').onclick=()=>{ aiWhy='AI skipped by user'; finish(local,'basic'); };
-  google.script.run
-    .withSuccessHandler(j=>{ try{ finish(fromAi(JSON.parse(j),local.title),'ai'); }catch(e){ aiWhy='AI answer could not be used ('+(e&&e.message||e)+')'; finish(local,'basic'); } })
-    .withFailureHandler(e=>{ aiWhy=String(e&&e.message||e||'unknown error'); finish(local,aiWhy.indexOf('NO_KEY')>=0?'nokey':'basic'); })
-    .aiParse(txt);
-}
-$('makeBtn').onclick=()=>{
-  const txt=$('input').value.trim();
-  if(!txt){ $('err').textContent='Paste the plan text first.'; return; }
-  if(!parse(txt).groups.length){ $('err').textContent='No activities found. Check the pasted text.'; return; }
-  if(!validEmail(getEmail())){ show('email'); return; }
-  $('makeBtn').disabled=true;
-  readPlan(txt,(p,how)=>{
-  p.rawText=txt;
-  $('makeBtn').disabled=false;
-  $('err').textContent='';
-  if(how!=='ai'){
-    toast(how==='nokey'?'AI key not set – used basic reading':'AI not available – used basic reading');
-    // keep the real reason on screen so it can be fixed
-    $('aiWhy').textContent='ℹ️ Basic reading used. Reason: '+(how==='nokey'?'GEMINI_API_KEY is not set in Script Properties':aiWhy);
-    $('aiWhy').classList.remove('hidden');
-  } else $('aiWhy').classList.add('hidden');
-  if(!hasGS()){ state=p; save(); render(); show('track'); setSync('Sheet not connected','bad'); return; }
-  $('err').textContent='🔎 Checking the register for work already done…'; $('makeBtn').disabled=true;
-  google.script.run
-    .withSuccessHandler(j=>{ $('makeBtn').disabled=false; $('err').textContent=''; const r=JSON.parse(j); if(!r.master) toast('Cell register not found – checked past shifts only'); reviewPlan(p,r); })
-    .withFailureHandler(()=>{ $('makeBtn').disabled=false; toast('Duplicate check failed – plan created without it'); createPlan(p); })
-    .checkPlan(JSON.stringify(p));
-  });
-};
-function reviewPlan(p,r){
-  const dups=r.dups||[], unk={}, unc={}, nc={}; (r.newCells||[]).forEach(id=>nc[id]=1); (r.unknown||[]).forEach(id=>unk[id]=1); (r.unclear||[]).forEach(id=>unc[id]=1);
-  const byId={}; dups.forEach(d=>byId[d.id]=d);
-  const list=$('dupList'); list.innerHTML='';
-  let nOk=0,nDup=0,nUnk=0,nChk=0,nNew=0;
-  p.groups.forEach(g=>{
-    const h=document.createElement('div'); h.className='rv-grp'; h.textContent=g.name; list.appendChild(h);
-    g.items.forEach(it=>{
-      const d=byId[it.id];
-      const isNew=!d&&nc[it.id];
-      const isChk=!d&&!isNew&&unc[it.id]&&!unk[it.id]&&it.label!=='Activity';
-      const row=document.createElement(d||isChk||isNew?'label':'div');
-      if(isChk||isNew){ const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.dataset.id=it.id; cb.title='Ticked = take into tonight\'s plan'; row.appendChild(cb); }
-      const tx=document.createElement('div');
-      const b=document.createElement('b'); b.textContent=it.label==='Activity'?'(whole activity)':it.label;
-      const tg=document.createElement('span'); tg.className='tag2';
-      if(d){
-        nDup++; row.className='rv-row dup';
-        // fully done: left out unless you tick it; part done: taken (rest of the work) unless you untick it
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!d.all; cb.dataset.id=it.id; cb.title='Ticked = take into tonight\'s plan'; row.appendChild(cb);
-        tg.textContent=d.all?'🔴 ALREADY DONE – left out (tick to take it anyway)':'🔴 PART DONE – '+d.steps.join(', ')+' already done; ticked = take the rest';
-        tx.append(b,tg);
-        if(nc[it.id]){ const nl=document.createElement('small'); nl.className='newline'; nl.textContent='🆕 New cell in the register'; tx.appendChild(nl); }
-      } else if(isNew){
-        nNew++; row.className='rv-row newc';
-        tg.textContent='🆕 NEW CELL – cross-check: is "'+g.name+'" really needed here? (untick to leave out)';
-        tx.append(b,tg);
-      } else if(unc[it.id]&&!unk[it.id]&&it.label!=='Activity'){
-        // the work type could not be recognised, so it cannot be checked automatically
-        nChk++; row.className='rv-row chk';
-        const clash=((r.items||{})[it.id]||[]).some(x=>x.conflict);
-        tg.textContent=(clash?'🔵 CHECK – the register does not agree with itself, see below':'🔵 CHECK – work type not clear ("'+g.name+'"), see register below')+' (untick to leave out)';
-        tx.append(b,tg);
-      } else if(unk[it.id]){
-        nUnk++; row.className='rv-row unk';
-        tg.textContent='🟠 NOT IN REGISTER – check the cell number'; tx.append(b,tg);
-      } else {
-        nOk++; row.className='rv-row ok';
-        tg.textContent='🟢 TO DO TONIGHT'; tx.append(b,tg);
-      }
-      // each work asked for this cell, checked one by one
-      ((r.items||{})[it.id]||[]).forEach(x=>{
-        const wl=document.createElement('small');
-        wl.className=x.done?'wk done':'wk todo';
-        if(x.conflict&&!x.done){ wl.className='wk done'; wl.textContent='⚠ '+x.name+' – '+x.conflict; tx.appendChild(wl); return; }
-        wl.textContent=x.done?('✗ '+x.name+' – already done: '+x.src.join(', '))
-          :('✓ '+x.name+' – to do'+(x.note==='no register column'?' (no register column, past shifts checked)':x.note==='not tracked'?' (not tracked)':''));
-        tx.appendChild(wl);
-      });
-      const rg=(r.regs||{})[it.id];
-      if(rg){ const rl=document.createElement('small'); rl.textContent='Register: '+(rg.length?rg.join(' · '):'nothing done yet'); tx.appendChild(rl); }
-      row.appendChild(tx); list.appendChild(row);
-    });
-  });
-  $('rvSum').innerHTML='';
-  [['g','🟢 '+nOk+' to do'],['r','🔴 '+nDup+' already done'],['p','🆕 '+nNew+' new cell'],['b','🔵 '+nChk+' check yourself'],['a','🟠 '+nUnk+' not in register']].forEach(([c,t])=>{ const sp=document.createElement('span'); sp.className=c; sp.textContent=t; $('rvSum').appendChild(sp); });
-  $('review').classList.remove('hidden'); $('review').scrollIntoView({behavior:'smooth'});
-  $('revCancel').onclick=()=>{ $('review').classList.add('hidden'); };
-  $('revOk').onclick=()=>{
-    const pick={}; list.querySelectorAll('input').forEach(cb=>pick[cb.dataset.id]=cb.checked);
-    const byId={}; dups.forEach(d=>byId[d.id]=d);
-    p.groups.forEach(g=>{
-      g.items=g.items.filter(it=>{
-        const d=byId[it.id];
-        if(nc[it.id]) it.newCell=true;
-        const take=(it.id in pick)?pick[it.id]:true;   // ticked = take it
-        if(!take) return false;
-        if(!d) return true;
-        it.dup=d.why.join(' | ')||'already done earlier'; it.dupSteps=d.steps;
-        if(!d.all&&d.steps.length){
-          d.steps.forEach(st=>{ it.done=it.done||{}; it.done[st]=true; }); it.status=stepStatus(g,it);
-          it.remark=it.remark||'Done earlier: '+d.steps.join(', ');
-        }
-        return true;
-      });
-    });
-    p.groups=p.groups.filter(g=>g.items.length);
-    $('review').classList.add('hidden');
-    if(!p.groups.length){ $('err').textContent='Everything in this plan is already done. Nothing to create.'; return; }
-    createPlan(p);
-  };
-}
-function createPlan(p){
-  // only here the plan really changes for everyone; checking alone changes nothing
-  if(state&&!confirm('This replaces the current plan for everyone. Continue?')) return;
-  $('makeBtn').disabled=true; $('err').textContent='Creating…';
-  google.script.run
-    .withSuccessHandler(j=>{ $('makeBtn').disabled=false; $('err').textContent=''; pending={}; state=JSON.parse(j); save(); render(); show('track'); setSync('Saved to sheet ✓ '+stamp(),'ok');
-      if(confirm('Plan created. Send it to your workers by SMS now?')) openSms(); })
-    .withFailureHandler(e=>{ $('makeBtn').disabled=false; $('err').textContent='Not saved – '+(e&&e.message||'check internet'); })
-    .newPlan(JSON.stringify(p), getEmail());
-}
-function serverCall(fn,args,ok){
-  if(!validEmail(getEmail())){ show('email'); return; }
-  if(!hasGS()){ $('xErr').textContent='Sheet not connected'; return; }
-  google.script.run
-    .withSuccessHandler(j=>{
-      const r=JSON.parse(j);
-      if(r.stale){ adopt(r.state,true); $('xErr').textContent='The plan changed on another device. Please try again.'; return; }
-      adopt(r.state,true); setSync('Saved to sheet ✓ '+stamp(),'ok'); if(ok) ok();
-    })
-    .withFailureHandler(e=>{ $('xErr').textContent='Not saved – '+(e&&e.message||'check internet'); })
-    [fn].apply(null,args.concat([getEmail()]));
-}
-$('xAdd').onclick=()=>{
-  const name=$('xName').value.replace(/\s+/g,' ').trim();
-  if(!name){ $('xErr').textContent='Write what work was done.'; return; }
-  const cells=$('xCells').value.trim();
-  const g=parse(name+(cells?'\n'+cells:'')).groups[0];
-  const st=$('xStatus').value, rk=$('xRemark').value.trim();
-  if(g.items.length===1&&g.items[0].label==='Activity'&&cells) g.items[0].label=cells;
-  g.items.forEach(it=>{ it.status=st; it.remark=rk; if(hasSteps(g)){ it.done={}; g.steps.forEach((x,k)=>{ it.done[x]=st==='done'||(st==='nc'&&k===0); }); } });
-  $('xErr').textContent='Adding…'; $('xAdd').disabled=true;
-  serverCall('addExtra',[state.planId,JSON.stringify({name:g.name,steps:g.steps,items:g.items})],()=>{
-    $('xName').value=''; $('xCells').value=''; $('xRemark').value=''; $('xErr').textContent='Added ✓';
-  });
-  setTimeout(()=>{ $('xAdd').disabled=false; },1500);
-};
-function removeGroup(g){
-  if(!confirm('Remove "'+g.name+'" from tonight\'s plan for everyone?')) return;
-  g.items.forEach(it=>delete pending[it.id]);
-  serverCall('removeGroup',[state.planId,g.name]);
-}
-function removeExtra(it){
-  if(!confirm('Remove '+it.label+' from extra work?')) return;
-  delete pending[it.id];
-  serverCall('removeExtra',[state.planId,it.id]);
-}
-$('aiRepBtn').onclick=()=>{
-  if(!validEmail(getEmail())){ show('email'); return; }
-  if(!hasGS()){ $('aiRepMsg').textContent='Sheet not connected'; return; }
-  if(Object.keys(pending).length) syncNow();
-  $('aiRepBtn').disabled=true; $('aiRepMsg').textContent='🤖 AI is writing the report…';
-  setTimeout(()=>google.script.run
-    .withSuccessHandler(t=>{ $('aiRepBtn').disabled=false; $('aiRepMsg').textContent='Saved in the "AI Report" tab ✓'; $('aiRepBox').value=t; $('aiRepBox').classList.remove('hidden'); $('aiCopyBtn').classList.remove('hidden'); })
-    .withFailureHandler(e=>{ $('aiRepBtn').disabled=false; const m=String(e&&e.message||''); $('aiRepMsg').textContent=m.indexOf('NO_KEY')>=0?'AI key not set (Script Properties > GEMINI_API_KEY)':'AI report failed – '+(m||'check internet'); })
-    .aiReport(getEmail()), Object.keys(pending).length?1500:0);
-};
-$('aiCopyBtn').onclick=async()=>{ toast(await copy($('aiRepBox').value)?'AI report copied – paste it in WhatsApp':'Copy failed'); };
-// ---- SMS to keypad-phone workers ----
-// keypad phones read plain text best: swap fancy dashes/quotes, drop emoji
-function smsClean(t){
-  return String(t||'').replace(/[–—−]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"')
-    .replace(/…/g,'...').replace(/[•·]/g,'-').replace(/ /g,' ')
-    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️‍⃣]/gu,'')
-    .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-}
-function planText(){
-  if(state&&state.rawText) return state.rawText;
-  if(!state) return '';
-  let t=state.title+'\n';
-  state.groups.forEach(g=>{ t+='\n'+g.name+'\n'; const c=g.items.filter(i=>i.label!=='Activity').map(i=>i.label+(i.remark?' ('+i.remark+')':'')); if(c.length) t+=c.join(', ')+'\n'; });
-  return t;
-}
-function smsCount(){
-  const t=$('smsText').value, ascii=/^[\x0A\x0D\x20-\x7E]*$/.test(t), n=t.length;
-  const parts=ascii?(n<=160?1:Math.ceil(n/153)):(n<=70?1:Math.ceil(n/67));
-  $('smsCount').textContent=n+' characters · '+parts+' SMS part'+(parts>1?'s':'')+(ascii?'':' (contains special characters, so each part is shorter)');
-  document.querySelectorAll('#smsList a.send').forEach(a=>{ a.href='sms:'+a.dataset.phone+'?body='+encodeURIComponent(t); });
-}
-function drawWorkers(list){
-  const box=$('smsList'); box.innerHTML='';
-  if(!list.length){ const p=document.createElement('p'); p.className='empty'; p.textContent='No workers yet – add them below.'; box.appendChild(p); return; }
-  list.forEach(w=>{
-    const row=document.createElement('div'); row.className='smsw';
-    const nm=document.createElement('div'); nm.className='nm';
-    const b=document.createElement('b'); b.textContent=w.name; const sm=document.createElement('small'); sm.textContent=w.phone; nm.append(b,sm);
-    const a=document.createElement('a'); a.className='send'; a.textContent='Send'; a.dataset.phone=w.phone;
-    a.onclick=()=>{ setTimeout(()=>{ a.classList.add('sent'); a.textContent='Opened ✓ (send again)'; },300); };
-    const rm=document.createElement('button'); rm.className='rmw'; rm.textContent='Remove';
-    rm.onclick=()=>{ if(!confirm('Remove '+w.name+' from the SMS list?')) return;
-      google.script.run.withSuccessHandler(j=>drawWorkers(JSON.parse(j))).withFailureHandler(e=>$('wErr').textContent='Not removed – '+(e&&e.message||'')).removeWorker(w.phone,getEmail()); };
-    row.append(nm,a,rm); box.appendChild(row);
-  });
-  smsCount();
-}
-function openSms(){
-  if(!validEmail(getEmail())){ show('email'); return; }
-  $('smsText').value=smsClean(planText()); smsCount(); show('sms');
-  if(!hasGS()){ $('smsList').textContent='Sheet not connected'; return; }
-  google.script.run.withSuccessHandler(j=>drawWorkers(JSON.parse(j)))
-    .withFailureHandler(e=>{ $('smsList').textContent='Could not load workers – '+(e&&e.message||''); }).getWorkers();
-}
-$('smsBtn').onclick=openSms;
-$('smsBack').onclick=()=>show(state?'track':'paste');
-$('smsText').oninput=smsCount;
-$('wAdd').onclick=()=>{
-  const n=$('wName').value.trim(), ph=$('wPhone').value.trim();
-  if(!n||ph.replace(/[^\d]/g,'').length<7){ $('wErr').textContent='Enter a name and a valid phone number.'; return; }
-  $('wErr').textContent='Saving…';
-  google.script.run.withSuccessHandler(j=>{ $('wErr').textContent=''; $('wName').value=''; $('wPhone').value=''; drawWorkers(JSON.parse(j)); })
-    .withFailureHandler(e=>{ $('wErr').textContent='Not added – '+(e&&e.message||''); }).addWorker(n,ph,getEmail());
-};
-$('saveBtn').onclick=()=>{ if(Object.keys(pending).length) syncNow(); else poll(); };
-$('topNewBtn').onclick=()=>{ $('input').value=''; $('err').textContent=''; show('paste'); $('input').focus(); };
-$('newBtn').onclick=()=>{ $('input').value=''; show('paste'); };
-$('backBtn').onclick=()=>show('track');
-$('copyBtn').onclick=async()=>{ toast(await copy(report())?'Report copied – paste it in WhatsApp':'Copy failed – try Share'); };
-if(navigator.share){
-  $('shareBtn').classList.remove('hidden');
-  $('shareBtn').onclick=()=>navigator.share({text:report()}).catch(()=>{});
-}
-
-let pendingView='paste';
-$('emailBtn').onclick=()=>{
-  const e=$('emailIn').value.trim().toLowerCase();
-  if(!validEmail(e)){ $('emailErr').textContent='Please enter a valid email address.'; return; }
-  try{ localStorage.setItem(EKEY,e); }catch(_){}
-  if(getEmail()!==e){ $('emailErr').textContent='This browser blocked saving. Turn off private mode and try again.'; return; }
-  $('emailErr').textContent='';
-  show(state?'track':pendingView);
-  if(state) syncNow();
-};
-$('whoChange').onclick=()=>{ $('emailIn').value=getEmail(); pendingView=state?'track':'paste'; show('email'); };
-function start(s){
-  state=(s&&s.groups)?normalize(s):null;
-  if(state){ render(); show('track'); setSync('Loaded from sheet','ok'); } else show('paste');
-}
-const local=load();
-let autoEmail=false;
-if(typeof google!=='undefined'&&google.script){
-  google.script.run.withSuccessHandler(e=>{
-    if(e&&validEmail(e)){
-      autoEmail=true;
-      memEmail=e; try{ localStorage.setItem(EKEY,e); }catch(_){}
-      $('whoEmail').textContent=e; $('whoChange').classList.add('hidden');
-      if(!$('emailView').classList.contains('hidden')) show(state?'track':pendingView);
+    if (rows.length) {
+      state.rev = (state.rev || 0) + 1;
+      writeLog_(ss, state.date, rows, now, by, false);
+      writeState_(ss, state);
     }
-  }).whoAmI();
-  google.script.run
-    .withSuccessHandler(j=>{ let s=null; try{ s=j?JSON.parse(j):null; }catch(e){} start(s); })
-    .withFailureHandler(()=>start(local))
-    .getState();
-} else start(local);
-</script>
-</body>
-</html>
+    return JSON.stringify({ stale: false, state: state });
+  });
+}
+
+// Extra work done outside tonight's target: added to the same plan for everyone
+function addExtra(planId, groupJson, userEmail) {
+  const by = who_(userEmail);
+  return withLock_(() => {
+    const ss = ss_();
+    const state = readState_(ss);
+    if (!state || String(state.planId) !== String(planId || '')) return JSON.stringify({ stale: true, state: state });
+    const add = JSON.parse(groupJson);
+    const name = String(add.name || '').trim();
+    if (!name) throw new Error('Enter the work done');
+    const now = now_(ss);
+    let g = state.groups.find(x => x.extra && x.name.toLowerCase() === name.toLowerCase());
+    if (!g) { g = { name: name, extra: true, items: [] }; if (Array.isArray(add.steps) && add.steps.length > 1) g.steps = add.steps; state.groups.push(g); }
+    const have = {}; g.items.forEach(it => { have[it.label] = true; });
+    const rows = [];
+    (add.items || []).forEach(it => {
+      if (have[it.label]) return;
+      const item = { id: String(it.id), label: String(it.label), status: it.status || 'done', remark: String(it.remark || ''), done: it.done || {}, by: by, at: now };
+      g.items.push(item); rows.push({ g: g, it: item }); have[it.label] = true;
+    });
+    if (rows.length) {
+      enrich_([g], master_(ss));
+      state.rev = (state.rev || 0) + 1;
+      writeLog_(ss, state.date, rows, now, by, true);
+      writeState_(ss, state);
+    }
+    return JSON.stringify({ stale: false, state: state });
+  });
+}
+
+// Remove an extra line added by mistake (target lines can't be removed)
+function removeExtra(planId, itemId, userEmail) {
+  who_(userEmail);
+  return withLock_(() => {
+    const ss = ss_();
+    const state = readState_(ss);
+    if (!state || String(state.planId) !== String(planId || '')) return JSON.stringify({ stale: true, state: state });
+    let removed = null;
+    state.groups.forEach(g => {
+      if (!g.extra) return;
+      const i = g.items.findIndex(it => it.id === itemId);
+      if (i >= 0) { removed = { g: g, it: g.items[i] }; g.items.splice(i, 1); }
+    });
+    state.groups = state.groups.filter(g => !g.extra || g.items.length);
+    if (removed) {
+      const sh = getLogSheet_(ss);
+      const last = sh.getLastRow();
+      if (last > 1) {
+        const vals = sh.getRange(2, 1, last - 1, 3).getDisplayValues();
+        const key = [state.date, actName_(removed.g), removed.it.label].join('|');
+        for (let r = vals.length - 1; r >= 0; r--) if (vals[r].join('|') === key) { sh.deleteRow(r + 2); break; }
+      }
+      state.rev = (state.rev || 0) + 1;
+      writeState_(ss, state);
+    }
+    return JSON.stringify({ stale: false, state: state });
+  });
+}
+
+// Breaking activities track two steps per cell: breaking and chipping
+// Activities with several steps (breaking, chipping, air blowing…): which are done / pending
+function stepCols_(g, it) {
+  if (!g.steps || g.steps.length < 2) return ['', ''];
+  const d = it.done || {};
+  return [g.steps.filter(x => d[x]).join(', '), g.steps.filter(x => !d[x]).join(', ')];
+}
+
+function isHeading_(t) {
+  t = String(t || '');
+  return /\bshift\b.*\bplan\b|\bplan\b.*\bshift\b/i.test(t) || /^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}$/.test(t.trim());
+}
+
+function deleteLogRows_(ss, date, activity) {
+  const sh = ss.getSheetByName(LOG_SHEET);
+  if (!sh || sh.getLastRow() < 2) return;
+  const vals = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getDisplayValues();
+  for (let r = vals.length - 1; r >= 0; r--) if (vals[r][0] === date && vals[r][1] === activity) sh.deleteRow(r + 2);
+}
+
+// Remove a whole activity read wrongly (any activity, from tracker and sheet)
+function removeGroup(planId, groupName, userEmail) {
+  who_(userEmail);
+  return withLock_(() => {
+    const ss = ss_();
+    const state = readState_(ss);
+    if (!state || String(state.planId) !== String(planId || '')) return JSON.stringify({ stale: true, state: state });
+    const g = state.groups.find(x => x.name === groupName);
+    if (g) {
+      state.groups = state.groups.filter(x => x !== g);
+      deleteLogRows_(ss, state.date, actName_(g));
+      state.rev = (state.rev || 0) + 1;
+      writeState_(ss, state);
+    }
+    return JSON.stringify({ stale: false, state: state });
+  });
+}
+
+function actName_(g) { return (g.extra ? 'EXTRA – ' : '') + g.name; }
+
+// Old page versions sent the whole plan and could wipe other people's updates
+function saveProgress() {
+  throw new Error('This page is out of date. Please reload it.');
+}
+
+function writeLog_(ss, date, rows, now, by, onlyNew) {
+  const sh = getLogSheet_(ss);
+  const last = sh.getLastRow();
+  const existing = last > 1 ? sh.getRange(2, 1, last - 1, 3).getDisplayValues() : [];
+  const rowOf = {};
+  existing.forEach((r, i) => { rowOf[r[0] + '|' + r[1] + '|' + r[2]] = i + 2; });
+  const appends = [];
+  rows.forEach(({ g, it }) => {
+    const status = STATUS_NAMES[it.status] || 'Not Started';
+    const key = date + '|' + actName_(g) + '|' + it.label;
+    const r = rowOf[key];
+    const tail = [status].concat(stepCols_(g, it), [it.remark || '', now, by]);
+    if (r) {
+      if (!onlyNew) sh.getRange(r, 5, 1, 6).setValues([tail]);
+    } else {
+      appends.push([date, actName_(g), it.label, locText_(it)].concat(tail));
+    }
+  });
+  if (appends.length) sh.getRange(sh.getLastRow() + 1, 1, appends.length, 10).setValues(appends);
+}
+
+const LOG_HEAD = ['Date', 'Activity', 'Cell', 'Location (from master)', 'Status', 'Steps Done', 'Steps Pending', 'Remark', 'Last Updated', 'Entered By (Email)'];
+
+function getLogSheet_(ss) {
+  let sh = ss.getSheetByName(LOG_SHEET);
+  if (sh) {
+    if (sh.getRange(1, 4).getValue() !== LOG_HEAD[3]) {
+      // older layouts: Date|Activity|Cell|Status|(Breaking|Chipping or Steps…)|Remark|Last Updated|Email
+      const e1 = sh.getRange(1, 5).getValue();
+      if (e1 !== 'Breaking' && e1 !== 'Steps Done') {
+        if (sh.getRange(1, 7).getValue() !== 'Entered By (Email)') sh.getRange(1, 7).setValue('Entered By (Email)');
+        sh.insertColumnsBefore(5, 2);
+      }
+      sh.insertColumnsAfter(3, 1);
+      sh.getRange(1, 1, 1, 10).setValues([LOG_HEAD]).setFontWeight('bold').setBackground('#1F2C38').setFontColor('#FFFFFF');
+      sh.setColumnWidth(4, 200);
+      sh.setColumnWidth(10, 260);
+    }
+    sh.getRange('E:E').createTextFinder('Not Completed').matchEntireCell(true).replaceAllWith('Work in Progress');
+    setStatusColours_(sh);
+    return sh;
+  }
+  sh = ss.insertSheet(LOG_SHEET);
+  sh.getRange(1, 1, 1, 10).setValues([LOG_HEAD]).setFontWeight('bold').setBackground('#1F2C38').setFontColor('#FFFFFF');
+  sh.setFrozenRows(1);
+  sh.getRange('A:A').setNumberFormat('@');   // keep 06.10.2026 as text
+  sh.getRange('I:I').setNumberFormat('@');
+  sh.setColumnWidth(2, 320);
+  sh.setColumnWidth(4, 200);
+  sh.setColumnWidth(10, 260);
+  setStatusColours_(sh);
+  return sh;
+}
+
+function setStatusColours_(sh) {
+  const statusCol = sh.getRange('E2:E');
+  const rule = (text, bg, fg) => SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo(text).setBackground(bg).setFontColor(fg).setRanges([statusCol]).build();
+  sh.setConditionalFormatRules([
+    rule('Completed', '#E3F3EA', '#1F8A4C'),
+    rule('Work in Progress', '#FFF3DC', '#B26A00'),
+    rule('Not Started', '#EEF1F4', '#5F6E7C'),
+    SpreadsheetApp.newConditionalFormatRule().whenCellNotEmpty().setFontColor('#1F8A4C').setRanges([sh.getRange('F2:F')]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenCellNotEmpty().setFontColor('#B26A00').setRanges([sh.getRange('G2:G')]).build(),
+    SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('⚠').setBackground('#FBE7E5').setFontColor('#A82C25').setRanges([sh.getRange('D2:D')]).build()
+  ]);
+}
+
+// ---------- AI reading of the WhatsApp plan (Google Gemini) ----------
+// Google retires older Gemini models for new users; these are current (Oct 2026)
+const DEFAULT_MODELS_ = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+
+function gemini_(prompt, asJson, schema) {
+  const key = prop_('GEMINI_API_KEY');
+  if (!key) throw new Error('NO_KEY');
+  const cfg = { temperature: asJson ? 0 : 0.2 };
+  if (asJson) cfg.responseMimeType = 'application/json';
+  if (asJson && schema) cfg.responseSchema = schema;
+  // first the model set in Script Properties (if any), then current models; a retired model (404) moves to the next
+  const models = [prop_('GEMINI_MODEL'), DEFAULT_MODELS_[0], DEFAULT_MODELS_[1]].filter((x, i, a) => x && a.indexOf(x) === i);
+  // busy (503/429/500) = wait and retry, then try the next model; retired (404) = next model straight away
+  let res = null;
+  outer:
+  for (let i = 0; i < models.length; i++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = UrlFetchApp.fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[i]) + ':generateContent',
+        {
+          method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+          headers: { 'x-goog-api-key': key },
+          payload: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: cfg })
+        });
+      const code = res.getResponseCode();
+      if (code === 200) break outer;
+      if (code === 404) break;
+      // a model that does not accept the answer format: drop the format rule and ask again
+      if (code === 400 && cfg.responseSchema) { delete cfg.responseSchema; attempt--; continue; }
+      if ([429, 500, 503].indexOf(code) < 0) break outer;
+      if (attempt < 2) Utilities.sleep(1500 * (attempt + 1));
+    }
+  }
+  if (res.getResponseCode() !== 200) throw new Error('AI error ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 300));
+  const body = JSON.parse(res.getContentText());
+  // newer models can add "thinking" parts: keep only the answer
+  const parts = (body.candidates && body.candidates[0] && body.candidates[0].content && body.candidates[0].content.parts) || [];
+  const out = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+  if (!out) throw new Error('AI gave no answer');
+  return out;
+}
+
+// the exact answer shape asked from Gemini
+const PLAN_SCHEMA_ = {
+  type: 'OBJECT',
+  properties: {
+    title: { type: 'STRING' },
+    date: { type: 'STRING' },
+    groups: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          name: { type: 'STRING' },
+          steps: { type: 'ARRAY', items: { type: 'STRING' } },
+          cells: { type: 'ARRAY', items: { type: 'STRING' } },
+          notes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { cell: { type: 'STRING' }, note: { type: 'STRING' } } } }
+        },
+        required: ['name', 'cells']
+      }
+    }
+  },
+  required: ['groups']
+};
+
+function aiParse(text) {
+  if (!prop_('GEMINI_API_KEY')) throw new Error('NO_KEY');
+  const prompt = [
+    'You read a night shift work plan from an aluminium smelter potline site, pasted from WhatsApp.',
+    'Return ONLY JSON: {"title": string, "date": "dd.mm.yyyy" or "", "groups": [{"name": string, "steps": [string], "cells": [string], "notes": [{"cell": string, "note": string}]}]}',
+    'Rules:',
+    '- title: the plan heading line, e.g. "NIGHT SHIFT PLAN 06.10.2026", "DAY SHIFT PLAN", "D SHIFT PLAN 20.10.2026", "A SHIFT PLAN". date from it.',
+    '  The heading is NEVER a group/activity. Any line that is just a shift name, a date, or a greeting is not an activity.',
+    '- Each activity line (with its location like "PL01 SEC04") is one group; "name" is that line, cleaned up.',
+    '- cells: every cell number for that activity, written like "1A-175". "1A-175,195,196" means 1A-175, 1A-195, 1A-196.',
+    '  A range "From 1A186 to 1A166" or "1A-120 to 125" means every number in between, each as its own cell.',
+    '  Cells may be on the SAME line as the activity, e.g. "Deck plate PL02 SEC05 - 2B 180,182,188" means',
+    '  name "Deck plate PL02 SEC05" and cells ["2B-180","2B-182","2B-188"]. Cell prefixes vary (1A, 2B, 3C…); keep each prefix.',
+    '  Cells may also come BEFORE the work, e.g. "2A-137,138,241, air blowing remaining" or "2B-140airblowing remaining"',
+    '  means name "Air blowing remaining" with those cells. Lines with the same work go into ONE group (merge their cells).',
+    '  Never leave cell numbers inside the name.',
+    '- Location lines like "PL02", "SEC05" or "PL02 SEC05" written on their own line (before or after the work line)',
+    '  belong to that activity: add them to its name (e.g. "Breaking and chipping PL02 SEC05"). They are never a group alone.',
+    '  If the activity has no cell numbers, cells is [].',
+    '- steps: if the activity line names more than one kind of work (e.g. breaking, chipping, air blowing, relining, deck plate,',
+    '  cleaning, handrail, concrete block reinstatement), list each kind separately in the order written, short Title Case',
+    '  names (e.g. ["Breaking","Chipping","Air Blowing","Relining","Deck Plate"]).',
+    '  Metal breaking always means two steps: ["Breaking","Chipping"]. If only one kind of work, steps is [].',
+    '- Keep words like URGENT / PRIORITY at the start of the name (e.g. "URGENT – Final cleaning PL02 SEC03").',
+    '- A short note after cells that names no work (e.g. "1B190 TO BE CHECK", "2B186 remaining", "2B190 check for cutting")',
+    '  is NOT an activity: those cells belong to the activity above, and the note goes in "notes" as {"cell": "1B-190", "note": "TO BE CHECK"}.',
+    '- A location header like "PL03:" applies to the activities under it (e.g. "Relining PL03", "Deck plate PL03").',
+    '- Never invent cells or work that is not in the text. Keep the original order.',
+    '',
+    'Valid cell rooms and sections (from the site cell master). Cells MUST use these rooms; use this to read cell numbers correctly:',
+    masterSummary_(master_(ss_())) || '(not available)',
+    '',
+    'Plan:',
+    text
+  ].join('\n');
+  const raw = gemini_(prompt, true, PLAN_SCHEMA_);
+  let plan;
+  try { plan = JSON.parse(raw.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '')); }
+  catch (e) { throw new Error('AI answer was not JSON: ' + raw.slice(0, 200)); }
+  // accept small differences in the answer's shape
+  if (Array.isArray(plan)) plan = plan.length && plan[0] && plan[0].groups ? plan[0] : { groups: plan };
+  if (plan && !plan.groups) {
+    const k = Object.keys(plan).find(x => Array.isArray(plan[x]) && /group|activit|task|work/i.test(x)) ||
+              Object.keys(plan).find(x => plan[x] && typeof plan[x] === 'object' && plan[x].groups);
+    if (k) plan = Array.isArray(plan[k]) ? Object.assign({}, plan, { groups: plan[k] }) : plan[k];
+  }
+  if (!plan || !Array.isArray(plan.groups) || !plan.groups.length) throw new Error('AI could not read the plan: ' + raw.slice(0, 200));
+  plan.groups = plan.groups.map(g => ({
+    name: String(g.name || g.activity || g.work || g.title || '').trim(),
+    steps: (Array.isArray(g.steps) ? g.steps : []).map(x => String(x).trim()).filter(Boolean),
+    cells: (Array.isArray(g.cells) ? g.cells : []).map(x => String(x).trim()).filter(Boolean),
+    notes: Array.isArray(g.notes) ? g.notes.reduce((o, x) => { if (x && x.cell) o[String(x.cell).trim()] = String(x.note || ''); return o; }, {})
+         : (g.notes && typeof g.notes === 'object' ? g.notes : {})
+  })).filter(g => g.name && !(/\bshift\b.*\bplan\b|\bplan\b.*\bshift\b/i.test(g.name) && !g.cells.length));
+  return JSON.stringify(plan);
+}
+
+// Run once from the editor after adding GEMINI_API_KEY, to give permission and test the AI
+function testAI() {
+  Logger.log('Key set: ' + (prop_('GEMINI_API_KEY') ? 'yes (' + prop_('GEMINI_API_KEY').length + ' characters)' : 'NO'));
+  Logger.log('Model: ' + (prop_('GEMINI_MODEL') || DEFAULT_MODELS_[0]));
+  Logger.log(aiParse('NIGHT SHIFT PLAN 06.10.2026\nBreaking, chipping & air blowing PL01 SEC04\n1A-175,195'));
+}
+
+// ---------- Cell master: the "Cell ID | Potline | Room | Section | Cell No …" tab ----------
+function normCell_(s) {
+  const m = String(s || '').toUpperCase().match(/^\s*(\d+[A-Z])\s*-?\s*0*(\d+)\s*$/);
+  return m ? m[1] + '-' + m[2] : '';
+}
+
+let MASTER_CACHE_ = null;
+function master_(ss) {
+  if (MASTER_CACHE_) return MASTER_CACHE_;
+  const isMaster = x => String(x.getRange(1, 1).getValue()).trim().toLowerCase() === 'cell id';
+  let sh = null;
+  const url = prop_('MASTER_URL') || MASTER_URL;
+  if (url) {
+    try { sh = SpreadsheetApp.openByUrl(url).getSheets().find(isMaster) || null; }
+    catch (e) { Logger.log('Cell master not opened: ' + e.message); }
+  }
+  if (!sh) sh = ss.getSheets().find(isMaster) || null;
+  if (!sh) return null;
+  const v = sh.getDataRange().getDisplayValues();
+  const head = v[0].map(h => String(h).trim());
+  const col = n => head.findIndex(h => h.toLowerCase() === n);
+  const iP = col('potline'), iR = col('room'), iS = col('section'), iN = col('cell no'), iT = col('cell type'), iNote = col('notes');
+  const skip = ['cell id', 'potline', 'room', 'section', 'cell no', 'cell type', 'notes', 'last updated'];
+  const work = head.map((h, i) => [h, i]).filter(([h]) => h && skip.indexOf(h.toLowerCase()) < 0);
+  const cells = {};
+  v.slice(1).forEach(r => {
+    const id = normCell_(r[0]);
+    if (!id) return;
+    const st = {};
+    work.forEach(([h, i]) => { if (String(r[i]).trim()) st[h] = String(r[i]).trim(); });
+    cells[id] = { pl: r[iP], room: r[iR], sec: r[iS], type: iT >= 0 ? r[iT] : '', notes: iNote >= 0 ? r[iNote] : '', st: st };
+  });
+  MASTER_CACHE_ = { cells: cells, sheet: sh.getParent().getName() + ' › ' + sh.getName(), work: work.map(w => w[0]) };
+  return MASTER_CACHE_;
+}
+
+// "Room 1A: Section 1 = cells 1-45; Section 2 = cells 46-90 …" for the AI
+function masterSummary_(m) {
+  if (!m) return '';
+  const rooms = {};
+  Object.keys(m.cells).forEach(id => {
+    const c = m.cells[id], n = +id.split('-')[1];
+    const r = rooms[c.room] = rooms[c.room] || { pl: c.pl, secs: {} };
+    const s = r.secs[c.sec] = r.secs[c.sec] || [n, n];
+    s[0] = Math.min(s[0], n); s[1] = Math.max(s[1], n);
+  });
+  return Object.keys(rooms).sort().map(k => 'Room ' + k + ' (Potline ' + rooms[k].pl + '): ' +
+    Object.keys(rooms[k].secs).map(sx => sx + ' = cells ' + rooms[k].secs[sx].join('-')).join('; ')).join('\n');
+}
+
+// add the exact potline, room and section from the master to every cell
+function enrich_(groups, m) {
+  if (!m) return;
+  groups.forEach(g => {
+    const where = {};
+    g.items.forEach(it => {
+      if (it.label === 'Activity') return;
+      const id = normCell_(it.label);
+      const c = id && m.cells[id];
+      if (c) {
+        it.label = id;
+        it.loc = { pl: c.pl, room: c.room, sec: c.sec, type: c.type, st: c.st, notes: c.notes };
+        delete it.unknown;
+        const k = 'PL' + c.pl + ' · ' + c.room;
+        where[k] = where[k] || [];
+        if (where[k].indexOf(c.sec) < 0) where[k].push(c.sec);
+      } else { it.unknown = true; delete it.loc; }
+    });
+    const keys = Object.keys(where);
+    if (keys.length) g.where = keys.map(k => k + ' · ' + where[k].join(', ')).join(' | ');
+  });
+}
+
+function locText_(it) {
+  if (it.loc) return 'PL' + it.loc.pl + ' / ' + it.loc.room + ' / ' + it.loc.sec;
+  if (it.unknown) return '⚠ Not in cell master';
+  return '';
+}
+
+// Run from the editor to check the master is found
+function testMaster() {
+  const m = master_(ss_());
+  if (!m) { Logger.log('Cell master not found. Check MASTER_URL and that A1 of the master tab is "Cell ID".'); return; }
+  Logger.log('Master tab: ' + m.sheet + ', cells: ' + Object.keys(m.cells).length);
+  Logger.log('Work columns: ' + m.work.join(', '));
+  const done = {};
+  Object.keys(m.cells).forEach(id => Object.keys(m.cells[id].st).forEach(w => { const v = m.cells[id].st[w]; done[w + ' = ' + v] = (done[w + ' = ' + v] || 0) + 1; }));
+  Logger.log('Values found in the register: ' + JSON.stringify(done));
+  Logger.log(masterSummary_(m));
+}
+
+// ---------- Duplicate check: is tonight's work already done? ----------
+function isDoneVal_(v) {
+  v = String(v || '').trim();
+  if (!v || /not|pending|wip|progress|hold|half|partial/i.test(v)) return false;
+  return /done|complet|finish|✓|✔|\byes\b|\bok\b|100\s*%/i.test(v) || /^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(v);
+}
+
+// master columns this activity is about (Breaking, Relining, Deck plate, Final Cleaning …)
+function worksFor_(g, m) {
+  const name = String(g.name || '').toLowerCase();
+  const steps = (g.steps || []).map(x => String(x).toLowerCase());
+  return (m ? m.work : []).filter(h => {
+    const hl = h.toLowerCase();
+    if (name.indexOf(hl) >= 0) return true;
+    return steps.some(st => hl === st || (st !== 'cleaning' && (hl.indexOf(st) >= 0 || st.indexOf(hl) >= 0)));
+  });
+}
+
+function workKey_(name) {
+  return String(name || '').toLowerCase()
+    .replace(/\b(pl|potline|sec|section|room)\s*-?\s*\d+\b/g, ' ')
+    .replace(/[^a-z]+/g, ' ').replace(/\b(at|and|the|of|in|for|including)\b/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// The kinds of work, how to spot them in text, and their column in the Cell Status Register (null = no column)
+const WORKS_ = [
+  ['Basement Cleaning', /basement\s*clean/i, 'basement cleaning'],
+  ['Initial Cleaning', /initial\s*clean/i, 'initial cleaning'],
+  ['Cavity Cleaning', /cavity\s*clean/i, 'cavity cleaning'],
+  ['Final Cleaning', /final\s*clean/i, 'final cleaning'],
+  ['Breaking', /break/i, 'breaking'],
+  ['Chipping', /chip/i, null],
+  ['Air Blowing', /air\s*-?\s*blow/i, null],
+  ['Relining', /re-?\s*lin/i, 'relining'],
+  ['Deck Plate', /deck\s*-?\s*plate/i, 'deck plate'],
+  ['Ramming', /ramm/i, 'ramming'],
+  ['Tab Buffing', /tab\s*buff|buffing/i, 'tab buffing/cleaning'],
+  ['Unbolting', /unbolt/i, 'unbolting']
+];
+// work order on a cell: breaking → chipping → air blowing → relining → deck plate
+const IMPLIED_BY_ = {
+  'Breaking': ['Relining', 'Deck Plate'],
+  'Chipping': ['Relining', 'Deck Plate'],
+  'Air Blowing': ['Relining', 'Deck Plate'],
+  'Relining': ['Deck Plate']
+};
+function canon_(text) {
+  const t = String(text || '');
+  return WORKS_.filter(w => w[1].test(t)).map(w => w[0]);
+}
+function regCol_(work, m) {
+  const w = WORKS_.find(x => x[0] === work);
+  if (!w || !w[2] || !m) return null;
+  return m.work.find(h => h.toLowerCase() === w[2] || h.toLowerCase().indexOf(w[2]) === 0) || null;
+}
+
+// Called before a new plan is created: for every cell, checks EACH work asked
+// (Breaking, Chipping, Relining, Deck plate …) separately against the register and earlier shift logs
+function checkPlan(json) {
+  const ss = ss_();
+  const plan = JSON.parse(json);
+  const m = master_(ss);
+  // earlier shifts: which works were finished on each cell
+  const hist = {};
+  const log = ss.getSheetByName(LOG_SHEET);
+  if (log && log.getLastRow() > 1) {
+    const v = log.getDataRange().getDisplayValues();
+    const h = v[0].map(x => String(x).trim().toLowerCase());
+    const c = n => h.indexOf(n);
+    const iD = c('date'), iA = c('activity'), iC = c('cell'), iS = c('status'), iSD = c('steps done'), iE = c('entered by (email)');
+    v.slice(1).forEach(r => {
+      const id = normCell_(r[iC]);
+      if (!id || r[iD] === plan.date) return;
+      let done = [];
+      const stepsDone = iSD >= 0 ? String(r[iSD] || '') : '';
+      if (stepsDone) stepsDone.split(/\s*,\s*/).forEach(x => done = done.concat(canon_(x)));
+      else if (r[iS] === 'Completed') done = canon_(r[iA]);
+      const who = iE >= 0 && r[iE] && !/unknown/i.test(r[iE]) ? ' (' + r[iE] + ')' : '';
+      done.forEach(w => { (hist[id] = hist[id] || {})[w] = (hist[id][w] || []).concat(r[iD] + ' shift' + who); });
+    });
+  }
+  const items = {}, dups = [], unknown = [], unclear = [], regs = {}, newCells = [];
+  plan.groups.forEach(g => {
+    const steps = g.steps && g.steps.length > 1 ? g.steps : null;
+    // the works asked for this activity: one per step, or the work named in the activity line
+    const asked = steps ? steps.map(st => ({ name: st, work: canon_(st)[0] || null }))
+                        : canon_(g.name).map(w => ({ name: w, work: w }));
+    g.items.forEach(it => {
+      const id = normCell_(it.label);
+      if (!id) return;
+      if (m && !m.cells[id]) unknown.push(it.id);
+      const mc = m && m.cells[id];
+      const res = asked.map(a => {
+        const out = { name: a.name, done: false, src: [] };
+        if (!a.work) { out.note = 'not tracked'; return out; }
+        const col = regCol_(a.work, m);
+        if (mc && col && isDoneVal_(mc.st[col])) out.src.push('Register: ' + col + ' = ' + mc.st[col]);
+        if (!col) out.note = 'no register column';
+        (hist[id] && hist[id][a.work] || []).forEach(x => out.src.push(x));
+        // a later stage done in the register means this earlier stage must be done too
+        // (only when the register says nothing for this work; if it says e.g. "In progress", that wins and the clash is shown)
+        if (!out.src.length && mc) (IMPLIED_BY_[a.work] || []).some(later => {
+          const lc = regCol_(later, m);
+          if (!lc || !isDoneVal_(mc.st[lc])) return false;
+          if (col && String(mc.st[col] || '').trim()) {
+            out.conflict = 'Register clash: ' + col + ' = ' + mc.st[col] + ' but ' + lc + ' = ' + mc.st[lc] + ' – please check';
+            return true;
+          }
+          out.src.push('Register: ' + lc + ' = ' + mc.st[lc] + ' (comes after ' + a.name + ')');
+          return true;
+        });
+        out.done = out.src.length > 0;
+        return out;
+      });
+      items[it.id] = res;
+      // what the register says about this cell, shown for every cell
+      if (mc) regs[it.id] = Object.keys(mc.st).filter(k => k !== 'Shell status').map(k => k + ': ' + mc.st[k]);
+      // activity line does not name a known work (e.g. "Remaining", "Check for cutting"): cannot auto-check
+      if (!asked.length || asked.every(a => !a.work) || res.some(x => x.conflict && !x.done)) unclear.push(it.id);
+      // a NEW cell (Cell type = New cell) normally needs no breaking / relining / deck plate: ask to cross-check
+      const RELINE_WORK = ['Breaking', 'Chipping', 'Air Blowing', 'Relining', 'Deck Plate', 'Ramming', 'Cavity Cleaning'];
+      if (mc && /new/i.test(mc.type) && (!asked.some(a => a.work) || asked.some(a => RELINE_WORK.indexOf(a.work) >= 0))) newCells.push(it.id);
+      const doneOnes = res.filter(x => x.done);
+      if (doneOnes.length) {
+        dups.push({
+          id: it.id, cell: id, group: g.name,
+          why: doneOnes.map(x => x.name + ': ' + x.src.join(', ')),
+          steps: steps ? doneOnes.map(x => x.name) : [],
+          all: doneOnes.length === res.length
+        });
+      }
+    });
+  });
+  return JSON.stringify({ dups: dups, unknown: m ? unknown : [], unclear: unclear, regs: regs, newCells: newCells, items: items, master: !!m });
+}
+
+// ---------- AI report: writes a clean English progress report and saves it to the "AI Report" tab ----------
+function aiReport(userEmail) {
+  const by = who_(userEmail);
+  const ss = ss_();
+  const st = readState_(ss);
+  if (!st || !st.groups.length) throw new Error('No plan to report on');
+  const W = { done: 'Completed', nc: 'Work in Progress', ns: 'Not Started' };
+  let total = 0, done = 0;
+  const lines = [];
+  st.groups.forEach(g => {
+    lines.push('ACTIVITY: ' + (g.extra ? '[EXTRA, not in target] ' : '') + g.name + (g.where ? ' | location from register: ' + g.where : ''));
+    g.items.forEach(it => {
+      total++; if (it.status === 'done') done++;
+      let l = '  - ' + (it.label === 'Activity' ? '(no cell)' : it.label) + ': ' + W[it.status];
+      if (g.steps && g.steps.length > 1) { const sc = stepCols_(g, it); l += ' | steps done: ' + (sc[0] || 'none') + ' | pending: ' + (sc[1] || 'none'); }
+      if (it.remark) l += ' | remark: ' + it.remark;
+      if (it.dup) l += ' | note: already done earlier (' + it.dup + ')';
+      if (it.unknown) l += ' | note: cell not found in register';
+      lines.push(l);
+    });
+  });
+  const prompt = [
+    'Write a short, professional night shift progress report in English for site management of an aluminium smelter potline relining job.',
+    'It will be pasted into WhatsApp: plain text, WhatsApp style (*bold* headings), no markdown tables, no # headings.',
+    'Structure:',
+    '1. Title line: "Night Shift Progress Report – ' + st.date + '" (use the shift name from this title if it is not night: "' + st.title + '").',
+    '2. Summary line: "' + done + ' of ' + total + ' targets completed" plus one sentence on overall progress.',
+    '3. *Completed* – activities and their cells.',
+    '4. *Work in Progress* – each with what is done, what is pending, and the reason from the remark.',
+    '5. *Not Started* – each with the reason from the remark if any.',
+    '6. *Extra work (not in target)* if any.',
+    '7. *Carry forward to next shift* – a short list of what must continue.',
+    'Group cells of the same activity on one line (e.g. "Relining PL02 SEC06 – 2B-94, 2B-97, 2B-98").',
+    'Keep URGENT tags. Use only the facts below; do not invent numbers, reasons or cells. Keep it concise.',
+    '',
+    'Data:',
+    lines.join('\n')
+  ].join('\n');
+  const text = gemini_(prompt, false).trim();
+  let sh = ss.getSheetByName('AI Report');
+  if (!sh) {
+    sh = ss.insertSheet('AI Report');
+    sh.getRange(1, 1, 1, 4).setValues([['Date', 'Generated At', 'Report', 'Generated By']]).setFontWeight('bold');
+    sh.setColumnWidth(3, 600);
+  } else if (sh.getRange(1, 4).getValue() !== 'Generated By') sh.getRange(1, 4).setValue('Generated By').setFontWeight('bold');
+  sh.appendRow([st.date, now_(ss), text, by]);
+  sh.getRange(sh.getLastRow(), 3).setWrap(true);
+  return text;
+}
+
+// ---------- Workers with keypad phones: plan is sent to them as a normal SMS from your own phone ----------
+const WORKERS_SHEET = 'Workers';
+function workersSheet_(ss) {
+  let sh = ss.getSheetByName(WORKERS_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(WORKERS_SHEET);
+    sh.getRange(1, 1, 1, 3).setValues([['Name', 'Phone', 'Active (Yes/No)']]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.getRange('B:B').setNumberFormat('@');   // keep leading 0 / + in phone numbers
+  }
+  return sh;
+}
+function cleanPhone_(p) { return String(p || '').replace(/[^\d+]/g, ''); }
+function getWorkers() {
+  const sh = workersSheet_(ss_());
+  const v = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 3).getDisplayValues() : [];
+  return JSON.stringify(v.filter(r => r[0] && cleanPhone_(r[1]).length >= 7 && !/^(no|n|false|0)$/i.test(String(r[2]).trim()))
+    .map(r => ({ name: String(r[0]).trim(), phone: cleanPhone_(r[1]) })));
+}
+function addWorker(name, phone, userEmail) {
+  who_(userEmail);
+  name = String(name || '').trim(); phone = cleanPhone_(phone);
+  if (!name) throw new Error('Enter the worker name');
+  if (phone.length < 7) throw new Error('Enter a valid phone number');
+  return withLock_(() => {
+    const sh = workersSheet_(ss_());
+    const v = sh.getLastRow() > 1 ? sh.getRange(2, 2, sh.getLastRow() - 1, 1).getDisplayValues() : [];
+    if (v.some(r => cleanPhone_(r[0]) === phone)) throw new Error('This number is already in the list');
+    sh.appendRow([name, phone, 'Yes']);
+    return getWorkers();
+  });
+}
+function removeWorker(phone, userEmail) {
+  who_(userEmail);
+  phone = cleanPhone_(phone);
+  return withLock_(() => {
+    const sh = workersSheet_(ss_());
+    const last = sh.getLastRow();
+    if (last > 1) {
+      const v = sh.getRange(2, 2, last - 1, 1).getDisplayValues();
+      for (let r = v.length - 1; r >= 0; r--) if (cleanPhone_(v[r][0]) === phone) sh.deleteRow(r + 2);
+    }
+    return getWorkers();
+  });
+}
